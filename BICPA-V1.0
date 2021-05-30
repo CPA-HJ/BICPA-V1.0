@@ -1,0 +1,41 @@
+import requests
+import json
+import pandas as pd
+import io
+import sys
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer,encoding='utf8') 
+
+header = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36'}
+
+form_data = {'_q': 'Article.list',
+'siteId': '7e0b3b27-2622-4aa7-b6f8-abfe5c5df922',
+'catalogId': '39df110b-8c30-4e19-8298-35179a58bd33',
+'pub': 'true',
+'limit': 134,
+'start': 1}
+
+#这是异步加载，请求方法是POST
+url = "http://www.bicpa.org.cn/dtzj/zxgg/getArticles.action"
+res = requests.post(url, data = form_data, headers = header)
+
+
+article_data0 =res.text.split("{success:true,datas:")[1] #去掉字符串前面的无用信息“{success:true,datas:”
+article_data = article_data0.split(",total:")[0] #去掉字符串后面的无用信息“,total:4946}”
+
+obj = json.loads(article_data)
+#获取标题含有“委员会专家提示”的文章的标题，发布时间和链接
+path = r"http://www.bicpa.org.cn"
+articles = []
+for info in obj:
+    if "专家提示" in info['title']:
+        article = {
+            "标题": info['title'].strip(), #strip()去除首尾空格
+            "发布日期": info['publishDate'],
+            "链接": path + info['url'] + info['primaryKey']+".html"             
+        }
+        articles.append(article)
+print(articles)
+d = pd.DataFrame(articles)
+d.columns=["标题","发布日期","链接"]
+d.index=d.index+1
+d.to_csv('d:\北京注协.csv',mode='a',encoding='gbk')
